@@ -1,8 +1,9 @@
+import { globalStyles } from "@/styles/globalClasses";
 import { StyleSheet, Text, View } from "react-native";
 
 export default function HomeScreen() {
 	return (
-		<View style={styles.container}>
+		<View style={globalStyles.mainContainer}>
 			<Text>This will be the home screen.</Text>
 		</View>
 	);
