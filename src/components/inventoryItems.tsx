@@ -1,53 +1,60 @@
 import { Feather } from "@react-native-vector-icons/feather";
-import { PropsWithChildren, useState } from "react";
+import { useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
-type AccordionItemProps = PropsWithChildren<{
+type InventoryItem = {
 	title: string;
-}>;
+	itemCount: number;
+	location: string;
+};
 
-export default function AccordionItem({ children, title }: AccordionItemProps) {
+type InventoryItemProps = {
+	category: string;
+
+	items: InventoryItem[];
+};
+
+export default function InventoryItem({ category, items }: InventoryItemProps) {
 	const [expanded, setExpanded] = useState(false);
-	var expandIcon;
+
 	function toggleItem() {
 		setExpanded(!expanded);
 	}
 
-	const body = <View style={styles.itemBody}>{children}</View>;
-
-	const item = (
-		<View style={styles.itemBody}>
-			<View style={styles.itemMain}>
-				<View style={styles.itemInfo}>
-					<View style={styles.counterBorder}>
-						<Text style={styles.itemCounter}>4</Text>
-					</View>
-
-					<Text style={styles.itemTitle}>Title</Text>
-				</View>
-
-				<View style={styles.itemButtons}>
-					<Text>Edit</Text>
-					<Text>Bin</Text>
-				</View>
-			</View>
-			<View style={styles.itemTags}>
-				<Text style={styles.tags}>Item Tags</Text>
-			</View>
-		</View>
-	);
-
 	return (
 		<View style={styles.sortContainer}>
 			<TouchableOpacity style={styles.sortHeader} onPress={toggleItem}>
-				<Text style={styles.sortTitle}>{title}</Text>
+				<Text style={styles.sortTitle}>{category}</Text>
 				<Feather
 					name={expanded ? "arrow-up-circle" : "arrow-down-circle"}
 					size={24}
 					color="black"
 				/>
 			</TouchableOpacity>
-			{expanded && item}
+
+			{expanded &&
+				items.map((item) => (
+					<View key={item.title} style={styles.itemBody}>
+						<View style={styles.itemMain}>
+							<View style={styles.itemInfo}>
+								<View style={styles.counterBorder}>
+									<Text style={styles.itemCounter}>{item.itemCount}</Text>
+								</View>
+
+								<Text style={styles.itemTitle}>{item.title}</Text>
+							</View>
+
+							<View style={styles.itemButtons}>
+								<Feather name="edit" size={24} color="black" />
+								<Feather name="trash" size={24} color="black" />
+							</View>
+						</View>
+
+						<View style={styles.itemTags}>
+							<Text style={styles.tags}>{item.location}</Text>
+						</View>
+					</View>
+				))}
 		</View>
 	);
 }
@@ -103,7 +110,7 @@ const styles = StyleSheet.create({
 		flex: 1,
 		flexDirection: "row",
 		alignItems: "center",
-		justifyContent: "space-around",
+		justifyContent: "space-between",
 	},
 	itemTags: {
 		flexDirection: "row",
