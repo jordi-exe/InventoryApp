@@ -6,15 +6,16 @@ type InventoryItem = {
 	title: string;
 	itemCount: number;
 	location: string;
+	category: string;
 };
 
 type InventoryItemProps = {
-	category: string;
+	group: string;
 
 	items: InventoryItem[];
 };
 
-export default function InventoryItem({ category, items }: InventoryItemProps) {
+export default function InventoryItem({ group, items }: InventoryItemProps) {
 	const [expanded, setExpanded] = useState(false);
 
 	function toggleItem() {
@@ -24,7 +25,7 @@ export default function InventoryItem({ category, items }: InventoryItemProps) {
 	return (
 		<View style={styles.sortContainer}>
 			<TouchableOpacity style={styles.sortHeader} onPress={toggleItem}>
-				<Text style={styles.sortTitle}>{category}</Text>
+				<Text style={styles.sortTitle}>{group}</Text>
 				<Feather
 					name={expanded ? "arrow-up-circle" : "arrow-down-circle"}
 					size={24}

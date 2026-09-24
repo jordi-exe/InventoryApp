@@ -1,5 +1,12 @@
 import InventoryItem from "@/components/inventoryItems";
 import { globalStyles } from "@/styles/globalClasses";
+import {
+	DropdownMenu,
+	DropdownMenuItem,
+	Host,
+	OutlinedButton,
+} from "@expo/ui/jetpack-compose";
+import { useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -9,6 +16,8 @@ type InventoryItemProps = {
 	category: string;
 	location: string;
 };
+
+type SortOption = "category" | "location";
 
 const inventory: InventoryItemProps[] = [
 	{
@@ -56,16 +65,19 @@ const inventory: InventoryItemProps[] = [
 ];
 
 export default function InventoryScreen() {
+	const [currentSort, setCurrentSort] = useState<SortOption>("category");
+	const [isExpanded, setIsExpanded] = useState(false);
+
 	const groupedItems = inventory.reduce(
 		(acc, item) => {
-			const { category } = item;
+			const group = item[currentSort];
 
 			//Checks if the category array exists
-			if (!acc[category]) {
-				acc[category] = [];
+			if (!acc[group]) {
+				acc[group] = [];
 			}
 
-			acc[category].push(item);
+			acc[group].push(item);
 
 			return acc;
 		},
@@ -79,18 +91,58 @@ export default function InventoryScreen() {
 			</View>
 
 			<View style={styles.optionsContainer}>
-				<Text>
-					Sort By:
-					<Text> Category</Text>
-				</Text>
+				<Host matchContents>
+					<DropdownMenu
+						expanded={isExpanded}
+						onDismissRequest={() => setIsExpanded(false)}
+						color={"white"}
+					>
+						<DropdownMenu.Trigger>
+							<OutlinedButton onClick={() => setIsExpanded(true)}>
+								<Text>{currentSort}</Text>
+							</OutlinedButton>
+						</DropdownMenu.Trigger>
+						<DropdownMenu.Items>
+							<DropdownMenuItem
+								onClick={() => {
+									setCurrentSort("category");
+									setIsExpanded(false);
+								}}
+							>
+								<DropdownMenuItem.Text>
+									<Text>Category</Text>
+								</DropdownMenuItem.Text>
+							</DropdownMenuItem>
+							<DropdownMenuItem
+								onClick={() => {
+									setCurrentSort("location");
+									setIsExpanded(false);
+								}}
+							>
+								<DropdownMenuItem.Text>
+									<Text>Location</Text>
+								</DropdownMenuItem.Text>
+							</DropdownMenuItem>
+							<DropdownMenuItem
+								onClick={() => {
+									setIsExpanded(false);
+								}}
+							>
+								<DropdownMenuItem.Text>
+									<Text>Example</Text>
+								</DropdownMenuItem.Text>
+							</DropdownMenuItem>
+						</DropdownMenu.Items>
+					</DropdownMenu>
+				</Host>
 
 				<Text>Filter</Text>
 			</View>
 
 			<SafeAreaView style={styles.inventoryContainer} edges={["right", "left"]}>
 				<ScrollView contentInsetAdjustmentBehavior="automatic">
-					{Object.entries(groupedItems).map(([category, items]) => (
-						<InventoryItem key={category} category={category} items={items} />
+					{Object.entries(groupedItems).map(([group, items]) => (
+						<InventoryItem key={group} group={group} items={items} />
 					))}
 				</ScrollView>
 			</SafeAreaView>
