@@ -1,6 +1,7 @@
 import InventoryItem from "@/components/inventoryItems";
 import { globalStyles } from "@/styles/globalClasses";
-import { useState } from "react";
+import { useSQLiteContext } from "expo-sqlite";
+import { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { DropdownMenu, MenuOption } from "../components/dropdownMenu";
@@ -14,56 +15,36 @@ type InventoryItemProps = {
 
 type SortOption = "category" | "location";
 
-const inventory: InventoryItemProps[] = [
-	{
-		title: "Tuna",
-		itemCount: 3,
-		category: "Canned Food",
-		location: "Lower Cupboard",
-	},
-	{
-		title: "Sardines",
-		itemCount: 7,
-		category: "Canned Food",
-		location: "Lower Cupboard",
-	},
-	{
-		title: "Milk",
-		itemCount: 72,
-		category: "Dairy",
-		location: "Lower Cupboard",
-	},
-	{
-		title: "Extra Beans",
-		itemCount: 480,
-		category: "Canned Food",
-		location: "Lower Cupboard",
-	},
-	{
-		title: "Onions",
-		itemCount: 2,
-		category: "Vegetables",
-		location: "Fridge",
-	},
-	{
-		title: "Tomatos",
-		itemCount: 5,
-		category: "Vegetables",
-		location: "Fridge",
-	},
-	{
-		title: "Cheese",
-		itemCount: 20,
-		category: "Dairy",
-		location: "Fridge",
-	},
-];
-
 export default function InventoryScreen() {
+	const db = useSQLiteContext();
+
+	const [inventory, setInventory] = useState<InventoryItemProps[]>([]);
 	const [currentSort, setCurrentSort] = useState<SortOption>("category");
-	const [isExpanded, setIsExpanded] = useState(false);
 
 	const [visible, setVisible] = useState(false);
+
+	useEffect(() => {
+		loadInventory();
+	}, []);
+
+	async function loadInventory() {
+		const items = await db.getAllSync<InventoryItemProps>(`
+				SELECT
+					items.id,
+					items.item_name AS title,
+					items.item_quantity AS itemCount,
+					categories.name AS category,
+					locations.name AS location
+				FROM items
+				JOIN categories
+					ON items.category_id = categories.id
+				JOIN locations
+					ON items.location_id = locations.id
+				ORDER BY items.id;
+			`);
+
+		setInventory(items);
+	}
 
 	const groupedItems = inventory.reduce(
 		(acc, item) => {
