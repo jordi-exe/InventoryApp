@@ -1,3 +1,4 @@
+import AddItem from "@/components/addItemBtn";
 import InventoryItem from "@/components/inventoryItems";
 import { globalStyles } from "@/styles/globalClasses";
 import { useSQLiteContext } from "expo-sqlite";
@@ -129,6 +130,8 @@ export default function InventoryScreen() {
 					))}
 				</ScrollView>
 			</SafeAreaView>
+
+			<AddItem />
 		</View>
 	);
 }
