@@ -47,7 +47,7 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
 
 	useEffect(() => {
 		if (triggerRef.current && visible) {
-			triggerRef.current.measure((fx, fy, width, height, px, py) => {
+			triggerRef.current.measure((_fx, _fy, width, height, px, py) => {
 				setPosition({
 					x: px,
 					y: py + height,

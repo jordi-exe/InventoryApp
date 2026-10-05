@@ -1,18 +1,12 @@
 import AddItem from "@/components/addItemBtn";
 import InventoryItem from "@/components/inventoryItems";
+import { loadInventory, type InventoryItemProps } from "@/database/database";
 import { globalStyles } from "@/styles/globalClasses";
 import { useSQLiteContext } from "expo-sqlite";
 import { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { DropdownMenu, MenuOption } from "../components/dropdownMenu";
-
-type InventoryItemProps = {
-	title: string;
-	itemCount: number;
-	category: string;
-	location: string;
-};
 
 type SortOption = "category" | "location";
 
@@ -25,25 +19,11 @@ export default function InventoryScreen() {
 	const [visible, setVisible] = useState(false);
 
 	useEffect(() => {
-		loadInventory();
+		loadInventoryItems();
 	}, []);
 
-	async function loadInventory() {
-		const items = await db.getAllSync<InventoryItemProps>(`
-				SELECT
-					items.id,
-					items.item_name AS title,
-					items.item_quantity AS itemCount,
-					categories.name AS category,
-					locations.name AS location
-				FROM items
-				JOIN categories
-					ON items.category_id = categories.id
-				JOIN locations
-					ON items.location_id = locations.id
-				ORDER BY items.id;
-			`);
-
+	async function loadInventoryItems() {
+		const items = await loadInventory(db);
 		setInventory(items);
 	}
 
@@ -131,7 +111,7 @@ export default function InventoryScreen() {
 				</ScrollView>
 			</SafeAreaView>
 
-			<AddItem />
+			<AddItem onItemAdded={loadInventoryItems} />
 		</View>
 	);
 }

@@ -3,6 +3,7 @@ import { useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 type InventoryItem = {
+	id: number;
 	title: string;
 	itemCount: number;
 	location: string;
@@ -35,7 +36,7 @@ export default function InventoryItem({ group, items }: InventoryItemProps) {
 
 			{expanded &&
 				items.map((item) => (
-					<View key={item.title} style={styles.itemBody}>
+					<View key={item.id} style={styles.itemBody}>
 						<View style={styles.itemMain}>
 							<View style={styles.itemInfo}>
 								<View style={styles.counterBorder}>

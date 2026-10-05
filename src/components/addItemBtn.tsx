@@ -1,16 +1,77 @@
+import { addItem, loadOptions } from "@/database/database";
+import { useSQLiteContext } from "expo-sqlite";
 import { useEffect, useRef, useState } from "react";
 import {
+	Button,
+	KeyboardAvoidingView,
 	Modal,
+	Platform,
 	Pressable,
+	ScrollView,
 	StyleSheet,
 	Text,
 	TextInput,
 	View,
 } from "react-native";
-import DateTimePicker, {
-	DateType,
-	useDefaultStyles,
-} from "react-native-ui-datepicker";
+import DateTimePicker, { useDefaultStyles } from "react-native-ui-datepicker";
+
+type AutocompleteInputProps = {
+	label: string;
+	value: string;
+	setValue: (value: string) => void;
+	options: string[];
+	placeholder?: string;
+};
+
+const AutoCompleteInput = ({
+	label,
+	value,
+	setValue,
+	options,
+	placeholder,
+}: AutocompleteInputProps) => {
+	const [focused, setFocused] = useState(false);
+
+	const filteredOptions = options.filter((option) =>
+		option.toLowerCase().includes(value.toLowerCase()),
+	);
+
+	return (
+		<View style={styles.autocompleteContainer}>
+			<Text>{label}</Text>
+
+			<TextInput
+				style={styles.textInput}
+				value={value}
+				onChangeText={setValue}
+				placeholder={placeholder}
+				placeholderTextColor="gray"
+				onFocus={() => setFocused(true)}
+				onBlur={() => {
+					//Lets the suggestions turn invisible when selecting a new textbox
+					setTimeout(() => setFocused(false), 100);
+				}}
+			/>
+
+			{focused && filteredOptions.length > 0 && (
+				<View style={styles.suggestionsContainer}>
+					{filteredOptions.map((option) => (
+						<Pressable
+							key={option}
+							style={styles.suggestion}
+							onPress={() => {
+								setValue(option);
+								setFocused(false);
+							}}
+						>
+							<Text>{option}</Text>
+						</Pressable>
+					))}
+				</View>
+			)}
+		</View>
+	);
+};
 
 const DateSelector = ({ selected, setSelected }: any) => {
 	const defaultStyles = useDefaultStyles();
@@ -19,36 +80,149 @@ const DateSelector = ({ selected, setSelected }: any) => {
 		<DateTimePicker
 			mode="single"
 			date={selected}
-			onChange={({ date }) => setSelected(date)}
-			style={{ backgroundColor: "black" }}
+			onChange={({ date }) => setSelected(date as Date)}
+			style={{ backgroundColor: "white", borderRadius: 10, padding: 10 }}
 			styles={{
 				...defaultStyles,
+				...calendarLightStyles,
+				//Will eventually add logic to swap between light and dark mode based on settings
 			}}
 		/>
 	);
 };
 
-export default function AddItem() {
+const FormatDate = (date?: Date) => {
+	if (!date) return "DD-MM-YYYY";
+
+	const day = String(date.getDate()).padStart(2, "0");
+	const month = String(date.getMonth() + 1).padStart(2, "0");
+	const year = date.getFullYear();
+
+	return `${day}-${month}-${year}`;
+};
+
+type AddItemProps = {
+	onItemAdded?: () => void;
+};
+
+export default function AddItem(onItemAdded?: AddItemProps) {
+	const db = useSQLiteContext();
+
+	//The visible state for the main Add Item modal
 	const [visible, setVisible] = useState(false);
 
+	//The visible state for the date selector modal
 	const [visibleDate, setVisibleDate] = useState(false);
-	const [selected, setSelected] = useState<DateType>();
+	const [selected, setSelected] = useState<Date>();
 
+	//The position of the date selector modal
 	const triggerRef = useRef<View>(null);
 	const [position, setPosition] = useState({ x: 0, y: 0, width: 0 });
 	const dropdownWidth = 300;
 
+	//Autocomplete states
+	const [units, setUnits] = useState<string[]>([]);
+	const [categories, setCategories] = useState<string[]>([]);
+	const [locations, setLocations] = useState<string[]>([]);
+
+	//Form states
+	const [itemName, setItemName] = useState("");
+	const [quantity, setQuantity] = useState("");
+	const [unit, setUnit] = useState("");
+	const [category, setCategory] = useState("");
+	const [location, setLocation] = useState("");
+
 	useEffect(() => {
-		if (triggerRef.current && visibleDate) {
-			triggerRef.current.measure((fx, fy, width, height, px, py) => {
-				setPosition({
-					x: px,
-					y: py + height,
-					width: width,
-				});
-			});
+		if (visible) {
+			loadSuggestions();
 		}
-	}, [visibleDate]);
+	}, [visible]);
+
+	async function loadSuggestions() {
+		const options = await loadOptions(db);
+
+		setUnits(options.units);
+		setCategories(options.categories);
+		setLocations(options.locations);
+	}
+
+	const formatDatabaseDate = (date: Date) => {
+		const year = date.getFullYear();
+		const month = String(date.getMonth() + 1).padStart(2, "0");
+		const day = String(date.getDate()).padStart(2, "0");
+
+		return `${year}-${month}-${day}`;
+	};
+
+	function clearForm() {
+		setItemName("");
+		setQuantity("");
+		setUnit("");
+		setCategory("");
+		setLocation("");
+		setSelected(undefined);
+		setVisibleDate(false);
+	}
+
+	async function handleAddItem() {
+		const trimmedItemName = itemName.trim();
+		const trimmedUnit = unit.trim();
+		const trimmedCategory = category.trim();
+		const trimmedLocation = location.trim();
+
+		const numericQuantity = Number(quantity);
+
+		const errors: string[] = [];
+
+		if (!trimmedItemName) {
+			errors.push("Item name is required");
+		}
+
+		if (!trimmedUnit) {
+			errors.push("Unit is required");
+		}
+
+		if (!quantity.trim()) {
+			errors.push("Quantity is required");
+		} else if (!Number.isFinite(numericQuantity)) {
+			errors.push("Quantity must be a number");
+		} else if (numericQuantity < 0) {
+			errors.push("Quantity cannot be negative");
+		}
+
+		if (!trimmedCategory) {
+			errors.push("Category is required");
+		}
+
+		if (!trimmedLocation) {
+			errors.push("Location is required");
+		}
+
+		if (errors.length > 0) {
+			errors.forEach((error) => console.log(error));
+			return;
+		}
+
+		try {
+			await addItem(db, {
+				itemName: trimmedItemName,
+				quantity: numericQuantity,
+				unit: trimmedUnit,
+				category: trimmedCategory,
+				location: trimmedLocation,
+				expiryDate: selected ? formatDatabaseDate(selected) : null,
+			});
+
+			console.log("Item added successfully");
+
+			clearForm();
+			setVisible(false);
+
+			onItemAdded?.onItemAdded?.();
+		} catch (error) {
+			console.error("Failed to add item:", error);
+		}
+	}
 
 	return (
 		<View>
@@ -64,108 +238,145 @@ export default function AddItem() {
 
 			{visible && (
 				<Modal transparent={true} visible={visible} animationType="fade">
-					<Pressable
-						style={styles.modalOverlay}
-						onPress={() => setVisible(!visible)}
+					<KeyboardAvoidingView
+						style={styles.keyboardAvoidingView}
+						behavior={Platform.OS === "ios" ? "padding" : "height"}
 					>
-						<View
-							style={styles.modalContainer}
-							onStartShouldSetResponder={() => true}
+						<Pressable
+							style={styles.modalOverlay}
+							onPress={() => setVisible(!visible)}
 						>
-							<View>
-								<Text>New Item</Text>
-							</View>
+							<View
+								style={styles.modalContainer}
+								onStartShouldSetResponder={() => true}
+							>
+								<View>
+									<Text>New Item</Text>
+								</View>
 
-							<View style={{ alignItems: "center", marginTop: 20 }}>
-								<Text>Expiry Date</Text>
-								<Pressable onPress={() => setVisibleDate(!visibleDate)}>
-									<View ref={triggerRef} style={styles.dateInput}>
-										<Text
-											style={{
-												flex: 1,
-												textAlign: "center",
-												textAlignVertical: "center",
-												justifyContent: "center",
-												alignItems: "center",
+								<ScrollView
+									style={styles.formScrollView}
+									contentContainerStyle={styles.formContent}
+									keyboardShouldPersistTaps="handled"
+								>
+									<View style={{ alignItems: "center", marginTop: 20 }}>
+										<Text>Expiry Date</Text>
+										<Pressable
+											onPress={() => {
+												triggerRef.current?.measure(
+													(_fx, _fy, width, height, px, py) => {
+														setPosition({
+															x: px,
+															y: py + height,
+															width,
+														});
+
+														setVisibleDate(true);
+													},
+												);
 											}}
 										>
-											DD-MM-YYYY
-										</Text>
-									</View>
-								</Pressable>
-
-								<Text>Name of Item</Text>
-								<TextInput
-									style={styles.textInput}
-									placeholder="Potatos"
-									placeholderTextColor="gray"
-								/>
-
-								<Text>Number of Items</Text>
-								<TextInput
-									style={styles.textInput}
-									placeholder="Potatos"
-									placeholderTextColor="gray"
-								/>
-
-								<Text>Units</Text>
-								<TextInput
-									style={styles.textInput}
-									placeholder="Potatos"
-									placeholderTextColor="gray"
-								/>
-
-								<Text>Item Category</Text>
-								<TextInput
-									style={styles.textInput}
-									placeholder="Potatos"
-									placeholderTextColor="gray"
-								/>
-
-								<Text>Item Location</Text>
-								<TextInput
-									style={styles.textInput}
-									placeholder="Potatos"
-									placeholderTextColor="gray"
-								/>
-
-								{visibleDate && (
-									<Modal
-										transparent={true}
-										visible={visibleDate}
-										animationType="fade"
-										onRequestClose={() => setVisibleDate(!visibleDate)}
-									>
-										<Pressable
-											style={styles.calendarOverlay}
-											onPress={() => setVisibleDate(!visibleDate)}
-										>
-											<View
-												style={[
-													styles.calendarMenu,
-													{
-														top: position.y,
-														left:
-															position.x +
-															position.width / 2 -
-															dropdownWidth / 2,
-														width: dropdownWidth,
-													},
-												]}
-											>
-												<DateSelector
-													selected={selected}
-													setSelected={setSelected}
-												/>
+											<View ref={triggerRef} style={styles.dateInput}>
+												<Text
+													style={{
+														flex: 1,
+														textAlign: "center",
+														textAlignVertical: "center",
+														justifyContent: "center",
+														alignItems: "center",
+													}}
+												>
+													{FormatDate(selected)}
+												</Text>
 											</View>
 										</Pressable>
-									</Modal>
-								)}
 
-								{/* <DateSelector selected={selected} setSelected={setSelected} /> */}
+										<Text>Name of Item</Text>
+										<TextInput
+											style={styles.textInput}
+											value={itemName}
+											onChangeText={setItemName}
+											placeholder="Potatos"
+											placeholderTextColor="gray"
+										/>
+
+										<Text>Number of Items</Text>
+										<TextInput
+											style={styles.textInput}
+											value={quantity}
+											onChangeText={(text) => {
+												if (/^\d*\.?\d*$/.test(text)) {
+													setQuantity(text);
+												}
+											}}
+											placeholder="Potatos"
+											placeholderTextColor="gray"
+											keyboardType="numeric"
+										/>
+
+										<AutoCompleteInput
+											label="Units"
+											value={unit}
+											setValue={setUnit}
+											options={units}
+											placeholder="Units"
+										/>
+
+										<AutoCompleteInput
+											label="Item Category"
+											value={category}
+											setValue={setCategory}
+											options={categories}
+											placeholder="Item Category"
+										/>
+
+										<AutoCompleteInput
+											label="Item Location"
+											value={location}
+											setValue={setLocation}
+											options={locations}
+											placeholder="Item Location"
+										/>
+
+										<Button title="Add Item" onPress={handleAddItem} />
+
+										{visibleDate && (
+											<Modal
+												transparent={true}
+												visible={visibleDate}
+												animationType="fade"
+												onRequestClose={() => setVisibleDate(!visibleDate)}
+											>
+												<Pressable
+													style={styles.calendarOverlay}
+													onPress={() => setVisibleDate(!visibleDate)}
+												>
+													<View
+														style={[
+															styles.calendarMenu,
+															{
+																top: position.y,
+																left:
+																	position.x +
+																	position.width / 2 -
+																	dropdownWidth / 2,
+																width: dropdownWidth,
+															},
+														]}
+													>
+														<DateSelector
+															selected={selected}
+															setSelected={setSelected}
+														/>
+													</View>
+												</Pressable>
+											</Modal>
+										)}
+									</View>
+								</ScrollView>
 							</View>
-						</View>
-					</Pressable>
+						</Pressable>
+					</KeyboardAvoidingView>
 				</Modal>
 			)}
 		</View>
@@ -173,6 +384,19 @@ export default function AddItem() {
 }
 
 const styles = StyleSheet.create({
+	keyboardAvoidingView: {
+		flex: 1,
+	},
+	formScrollView: {
+		width: "100%",
+		flex: 1,
+	},
+
+	formContent: {
+		alignItems: "center",
+		paddingTop: 20,
+		paddingBottom: 100,
+	},
 	calendarTest: {
 		backgroundColor: "red",
 	},
@@ -180,17 +404,16 @@ const styles = StyleSheet.create({
 		flex: 1,
 		justifyContent: "center",
 		alignItems: "center",
-
-		borderColor: "red",
-		borderWidth: 2,
 	},
 	modalContainer: {
 		alignItems: "center",
 		backgroundColor: "white",
 		width: "90%",
-		height: "70%",
-		marginBottom: 60,
+		height: "80%",
+		borderRadius: 10,
+		overflow: "visible",
 	},
+
 	addBtn: {
 		position: "absolute",
 		width: 100,
@@ -231,5 +454,75 @@ const styles = StyleSheet.create({
 		shadowOpacity: 0.2,
 		shadowRadius: 4,
 		elevation: 4,
+	},
+
+	//Autocomplete
+	autocompleteContainer: {
+		position: "relative",
+		width: "100%",
+	},
+
+	suggestionsContainer: {
+		position: "absolute",
+		top: "100%",
+		left: 0,
+		right: 0,
+
+		backgroundColor: "white",
+		borderWidth: 1,
+		borderColor: "lightgray",
+		borderRadius: 5,
+
+		zIndex: 1000,
+		elevation: 5,
+	},
+
+	suggestion: {
+		padding: 10,
+		borderBottomWidth: 1,
+		borderBottomColor: "lightgray",
+	},
+});
+
+const calendarLightStyles = StyleSheet.create({
+	year_selector_label: {
+		color: "black",
+	},
+	month_selector_label: {
+		color: "black",
+	},
+	weekday_label: {
+		color: "grey",
+	},
+	button_prev_image: {
+		tintColor: "black",
+	},
+	button_next_image: {
+		tintColor: "black",
+	},
+
+	day_label: {
+		color: "black",
+	},
+	month_label: {
+		color: "black",
+	},
+	year_label: {
+		color: "black",
+	},
+
+	selected: {
+		backgroundColor: "#c4c4c4",
+		borderRadius: 10,
+	},
+	selected_month: {
+		backgroundColor: "#c4c4c4",
+		borderRadius: 10,
+		borderWidth: 0,
+	},
+	selected_year: {
+		backgroundColor: "#c4c4c4",
+		borderRadius: 10,
+		borderWidth: 0,
 	},
 });
