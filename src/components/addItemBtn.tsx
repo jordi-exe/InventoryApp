@@ -1,3 +1,5 @@
+import { AutoCompleteInput } from "@/components/autocompleteInput";
+import { DateSelector } from "@/components/dateSelector";
 import { addItem, loadOptions } from "@/database/database";
 import { useSQLiteContext } from "expo-sqlite";
 import { useEffect, useRef, useState } from "react";
@@ -13,83 +15,6 @@ import {
 	TextInput,
 	View,
 } from "react-native";
-import DateTimePicker, { useDefaultStyles } from "react-native-ui-datepicker";
-
-type AutocompleteInputProps = {
-	label: string;
-	value: string;
-	setValue: (value: string) => void;
-	options: string[];
-	placeholder?: string;
-};
-
-const AutoCompleteInput = ({
-	label,
-	value,
-	setValue,
-	options,
-	placeholder,
-}: AutocompleteInputProps) => {
-	const [focused, setFocused] = useState(false);
-
-	const filteredOptions = options.filter((option) =>
-		option.toLowerCase().includes(value.toLowerCase()),
-	);
-
-	return (
-		<View style={styles.autocompleteContainer}>
-			<Text>{label}</Text>
-
-			<TextInput
-				style={styles.textInput}
-				value={value}
-				onChangeText={setValue}
-				placeholder={placeholder}
-				placeholderTextColor="gray"
-				onFocus={() => setFocused(true)}
-				onBlur={() => {
-					//Lets the suggestions turn invisible when selecting a new textbox
-					setTimeout(() => setFocused(false), 100);
-				}}
-			/>
-
-			{focused && filteredOptions.length > 0 && (
-				<View style={styles.suggestionsContainer}>
-					{filteredOptions.map((option) => (
-						<Pressable
-							key={option}
-							style={styles.suggestion}
-							onPress={() => {
-								setValue(option);
-								setFocused(false);
-							}}
-						>
-							<Text>{option}</Text>
-						</Pressable>
-					))}
-				</View>
-			)}
-		</View>
-	);
-};
-
-const DateSelector = ({ selected, setSelected }: any) => {
-	const defaultStyles = useDefaultStyles();
-
-	return (
-		<DateTimePicker
-			mode="single"
-			date={selected}
-			onChange={({ date }) => setSelected(date as Date)}
-			style={{ backgroundColor: "white", borderRadius: 10, padding: 10 }}
-			styles={{
-				...defaultStyles,
-				...calendarLightStyles,
-				//Will eventually add logic to swap between light and dark mode based on settings
-			}}
-		/>
-	);
-};
 
 const FormatDate = (date?: Date) => {
 	if (!date) return "DD-MM-YYYY";
@@ -103,6 +28,14 @@ const FormatDate = (date?: Date) => {
 
 type AddItemProps = {
 	onItemAdded?: () => void;
+};
+
+type FormErrorProps = {
+	itemName?: string;
+	quantity?: string;
+	unit?: string;
+	category?: string;
+	location?: string;
 };
 
 export default function AddItem(onItemAdded?: AddItemProps) {
@@ -131,6 +64,7 @@ export default function AddItem(onItemAdded?: AddItemProps) {
 	const [unit, setUnit] = useState("");
 	const [category, setCategory] = useState("");
 	const [location, setLocation] = useState("");
+	const [errors, setErrors] = useState<FormErrorProps>({});
 
 	useEffect(() => {
 		if (visible) {
@@ -162,6 +96,7 @@ export default function AddItem(onItemAdded?: AddItemProps) {
 		setLocation("");
 		setSelected(undefined);
 		setVisibleDate(false);
+		setErrors({});
 	}
 
 	async function handleAddItem() {
@@ -172,36 +107,38 @@ export default function AddItem(onItemAdded?: AddItemProps) {
 
 		const numericQuantity = Number(quantity);
 
-		const errors: string[] = [];
+		const validationErrors: FormErrorProps = {};
 
 		if (!trimmedItemName) {
-			errors.push("Item name is required");
+			validationErrors.itemName = "Item name is required";
 		}
 
 		if (!trimmedUnit) {
-			errors.push("Unit is required");
+			validationErrors.unit = "Unit is required";
 		}
 
 		if (!quantity.trim()) {
-			errors.push("Quantity is required");
+			validationErrors.quantity = "Quantity is required";
 		} else if (!Number.isFinite(numericQuantity)) {
-			errors.push("Quantity must be a number");
+			validationErrors.quantity = "Quantity must be a number";
 		} else if (numericQuantity < 0) {
-			errors.push("Quantity cannot be negative");
+			validationErrors.quantity = "Quantity cannot be negative";
 		}
 
 		if (!trimmedCategory) {
-			errors.push("Category is required");
+			validationErrors.category = "Category is required";
 		}
 
 		if (!trimmedLocation) {
-			errors.push("Location is required");
+			validationErrors.location = "Location is required";
 		}
 
-		if (errors.length > 0) {
-			errors.forEach((error) => console.log(error));
+		if (Object.keys(validationErrors).length > 0) {
+			setErrors(validationErrors);
 			return;
 		}
+
+		setErrors({});
 
 		try {
 			await addItem(db, {
@@ -299,6 +236,9 @@ export default function AddItem(onItemAdded?: AddItemProps) {
 											placeholder="Potatos"
 											placeholderTextColor="gray"
 										/>
+										{errors.itemName && (
+											<Text style={styles.errorText}>{errors.itemName}</Text>
+										)}
 
 										<Text>Number of Items</Text>
 										<TextInput
@@ -313,6 +253,9 @@ export default function AddItem(onItemAdded?: AddItemProps) {
 											placeholderTextColor="gray"
 											keyboardType="numeric"
 										/>
+										{errors.quantity && (
+											<Text style={styles.errorText}>{errors.quantity}</Text>
+										)}
 
 										<AutoCompleteInput
 											label="Units"
@@ -321,6 +264,9 @@ export default function AddItem(onItemAdded?: AddItemProps) {
 											options={units}
 											placeholder="Units"
 										/>
+										{errors.unit && (
+											<Text style={styles.errorText}>{errors.unit}</Text>
+										)}
 
 										<AutoCompleteInput
 											label="Item Category"
@@ -329,6 +275,9 @@ export default function AddItem(onItemAdded?: AddItemProps) {
 											options={categories}
 											placeholder="Item Category"
 										/>
+										{errors.category && (
+											<Text style={styles.errorText}>{errors.category}</Text>
+										)}
 
 										<AutoCompleteInput
 											label="Item Location"
@@ -337,8 +286,18 @@ export default function AddItem(onItemAdded?: AddItemProps) {
 											options={locations}
 											placeholder="Item Location"
 										/>
+										{errors.location && (
+											<Text style={styles.errorText}>{errors.location}</Text>
+										)}
 
 										<Button title="Add Item" onPress={handleAddItem} />
+										<Button
+											title="Cancel"
+											onPress={() => {
+												clearForm();
+												setVisible(false);
+											}}
+										/>
 
 										{visibleDate && (
 											<Modal
@@ -456,73 +415,8 @@ const styles = StyleSheet.create({
 		elevation: 4,
 	},
 
-	//Autocomplete
-	autocompleteContainer: {
-		position: "relative",
-		width: "100%",
-	},
-
-	suggestionsContainer: {
-		position: "absolute",
-		top: "100%",
-		left: 0,
-		right: 0,
-
-		backgroundColor: "white",
-		borderWidth: 1,
-		borderColor: "lightgray",
-		borderRadius: 5,
-
-		zIndex: 1000,
-		elevation: 5,
-	},
-
-	suggestion: {
-		padding: 10,
-		borderBottomWidth: 1,
-		borderBottomColor: "lightgray",
-	},
-});
-
-const calendarLightStyles = StyleSheet.create({
-	year_selector_label: {
-		color: "black",
-	},
-	month_selector_label: {
-		color: "black",
-	},
-	weekday_label: {
-		color: "grey",
-	},
-	button_prev_image: {
-		tintColor: "black",
-	},
-	button_next_image: {
-		tintColor: "black",
-	},
-
-	day_label: {
-		color: "black",
-	},
-	month_label: {
-		color: "black",
-	},
-	year_label: {
-		color: "black",
-	},
-
-	selected: {
-		backgroundColor: "#c4c4c4",
-		borderRadius: 10,
-	},
-	selected_month: {
-		backgroundColor: "#c4c4c4",
-		borderRadius: 10,
-		borderWidth: 0,
-	},
-	selected_year: {
-		backgroundColor: "#c4c4c4",
-		borderRadius: 10,
-		borderWidth: 0,
+	errorText: {
+		color: "red",
+		marginBottom: 4,
 	},
 });
