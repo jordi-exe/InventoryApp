@@ -8,6 +8,7 @@ type InventoryItem = {
 	itemCount: number;
 	location: string;
 	category: string;
+	expiryDate?: string;
 };
 
 type InventoryItemProps = {
@@ -16,8 +17,38 @@ type InventoryItemProps = {
 	items: InventoryItem[];
 };
 
+const FormatDate = (date?: Date) => {
+	if (!date) return null;
+
+	const day = String(date.getDate()).padStart(2, "0");
+	const month = String(date.getMonth() + 1).padStart(2, "0");
+	const year = date.getFullYear();
+
+	return `${day}-${month}-${year}`;
+};
+
+type ExpiryStatus = "valid" | "expiringSoon" | "expired";
+
+const GetExpiryStatus = (expiryDate?: string): ExpiryStatus => {
+	if (!expiryDate) return "valid";
+
+	const currentDate = new Date();
+	const expiry = new Date(expiryDate);
+
+	const difference = expiry.getTime() - currentDate.getTime();
+	const daysRemaining = Math.ceil(difference / (1000 * 3600 * 24));
+
+	if (daysRemaining < 0) {
+		return "expired";
+	} else if (daysRemaining <= 7) {
+		return "expiringSoon";
+	} else {
+		return "valid";
+	}
+};
+
 export default function InventoryItem({ group, items }: InventoryItemProps) {
-	const [expanded, setExpanded] = useState(false);
+	const [expanded, setExpanded] = useState(true);
 
 	function toggleItem() {
 		setExpanded(!expanded);
@@ -35,28 +66,41 @@ export default function InventoryItem({ group, items }: InventoryItemProps) {
 			</TouchableOpacity>
 
 			{expanded &&
-				items.map((item) => (
-					<View key={item.id} style={styles.itemBody}>
-						<View style={styles.itemMain}>
-							<View style={styles.itemInfo}>
-								<View style={styles.counterBorder}>
-									<Text style={styles.itemCounter}>{item.itemCount}</Text>
+				[...items]
+					.sort((a, b) => a.title.localeCompare(b.title))
+					.map((item) => (
+						<View key={item.id} style={styles.itemBody}>
+							<View style={styles.itemMain}>
+								<View style={styles.itemInfo}>
+									<View style={styles.counterBorder}>
+										<Text style={styles.itemCounter}>{item.itemCount}</Text>
+									</View>
+
+									<Text style={styles.itemTitle}>{item.title}</Text>
 								</View>
 
-								<Text style={styles.itemTitle}>{item.title}</Text>
+								<View style={styles.itemButtons}>
+									<Feather name="edit" size={24} color="black" />
+									<Feather name="trash" size={24} color="black" />
+								</View>
 							</View>
 
-							<View style={styles.itemButtons}>
-								<Feather name="edit" size={24} color="black" />
-								<Feather name="trash" size={24} color="black" />
+							{item.expiryDate && (
+								<Text
+									style={[
+										styles.itemExpiry,
+										styles[GetExpiryStatus(item.expiryDate)],
+									]}
+								>
+									{FormatDate(new Date(item.expiryDate))}
+								</Text>
+							)}
+
+							<View style={styles.itemTags}>
+								<Text style={styles.tags}>{item.location}</Text>
 							</View>
 						</View>
-
-						<View style={styles.itemTags}>
-							<Text style={styles.tags}>{item.location}</Text>
-						</View>
-					</View>
-				))}
+					))}
 		</View>
 	);
 }
@@ -89,6 +133,21 @@ const styles = StyleSheet.create({
 		flexDirection: "row",
 		justifyContent: "space-between",
 		marginBottom: 10,
+	},
+	itemExpiry: {
+		paddingBottom: 10,
+		paddingLeft: 0,
+
+		fontSize: 13,
+	},
+	valid: {
+		color: "grey",
+	},
+	expiringSoon: {
+		color: "#ee9f55",
+	},
+	expired: {
+		color: "red",
 	},
 	itemInfo: {
 		flexDirection: "row",

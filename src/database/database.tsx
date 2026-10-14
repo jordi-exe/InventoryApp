@@ -84,6 +84,7 @@ export async function loadInventory(db: SQLiteDatabase) {
 			items.id,
 			items.item_name AS title,
 			items.item_quantity AS itemCount,
+			items.item_expiry_date AS expiryDate,
 			categories.name AS category,
 			locations.name AS location
 		FROM items

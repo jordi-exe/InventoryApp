@@ -104,10 +104,15 @@ export default function InventoryScreen() {
 			</View>
 
 			<SafeAreaView style={styles.inventoryContainer} edges={["right", "left"]}>
-				<ScrollView contentInsetAdjustmentBehavior="automatic">
-					{Object.entries(groupedItems).map(([group, items]) => (
-						<InventoryItem key={group} group={group} items={items} />
-					))}
+				<ScrollView
+					contentInsetAdjustmentBehavior="automatic"
+					contentContainerStyle={{ paddingBottom: 150 }}
+				>
+					{Object.entries(groupedItems)
+						.sort(([a], [b]) => a.localeCompare(b))
+						.map(([group, items]) => (
+							<InventoryItem key={group} group={group} items={items} />
+						))}
 				</ScrollView>
 			</SafeAreaView>
 

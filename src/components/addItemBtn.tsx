@@ -187,8 +187,8 @@ export default function AddItem(onItemAdded?: AddItemProps) {
 								style={styles.modalContainer}
 								onStartShouldSetResponder={() => true}
 							>
-								<View>
-									<Text>New Item</Text>
+								<View style={styles.modalHeader}>
+									<Text style={styles.modalTitle}>Add a New Item</Text>
 								</View>
 
 								<ScrollView
@@ -196,8 +196,8 @@ export default function AddItem(onItemAdded?: AddItemProps) {
 									contentContainerStyle={styles.formContent}
 									keyboardShouldPersistTaps="handled"
 								>
-									<View style={{ alignItems: "center", marginTop: 20 }}>
-										<Text>Expiry Date</Text>
+									<View style={styles.modalBody}>
+										<Text style={styles.label}>Expiry Date</Text>
 										<Pressable
 											onPress={() => {
 												triggerRef.current?.measure(
@@ -228,7 +228,7 @@ export default function AddItem(onItemAdded?: AddItemProps) {
 											</View>
 										</Pressable>
 
-										<Text>Name of Item</Text>
+										<Text style={styles.label}>Name of Item</Text>
 										<TextInput
 											style={styles.textInput}
 											value={itemName}
@@ -240,7 +240,7 @@ export default function AddItem(onItemAdded?: AddItemProps) {
 											<Text style={styles.errorText}>{errors.itemName}</Text>
 										)}
 
-										<Text>Number of Items</Text>
+										<Text style={styles.label}>Number of Items</Text>
 										<TextInput
 											style={styles.textInput}
 											value={quantity}
@@ -249,7 +249,7 @@ export default function AddItem(onItemAdded?: AddItemProps) {
 													setQuantity(text);
 												}
 											}}
-											placeholder="Potatos"
+											placeholder="99"
 											placeholderTextColor="gray"
 											keyboardType="numeric"
 										/>
@@ -290,14 +290,23 @@ export default function AddItem(onItemAdded?: AddItemProps) {
 											<Text style={styles.errorText}>{errors.location}</Text>
 										)}
 
-										<Button title="Add Item" onPress={handleAddItem} />
-										<Button
-											title="Cancel"
-											onPress={() => {
-												clearForm();
-												setVisible(false);
+										<View
+											style={{
+												paddingTop: 15,
+												width: "60%",
+												flexDirection: "row",
+												justifyContent: "space-between",
 											}}
-										/>
+										>
+											<Button title="Add Item" onPress={handleAddItem} />
+											<Button
+												title="Cancel"
+												onPress={() => {
+													clearForm();
+													setVisible(false);
+												}}
+											/>
+										</View>
 
 										{visibleDate && (
 											<Modal
@@ -356,9 +365,7 @@ const styles = StyleSheet.create({
 		paddingTop: 20,
 		paddingBottom: 100,
 	},
-	calendarTest: {
-		backgroundColor: "red",
-	},
+
 	modalOverlay: {
 		flex: 1,
 		justifyContent: "center",
@@ -372,7 +379,18 @@ const styles = StyleSheet.create({
 		borderRadius: 10,
 		overflow: "visible",
 	},
-
+	modalHeader: {
+		padding: 5,
+	},
+	modalTitle: {
+		padding: 15,
+		fontSize: 20,
+		fontWeight: "bold",
+	},
+	modalBody: {
+		alignItems: "center",
+		gap: 5,
+	},
 	addBtn: {
 		position: "absolute",
 		width: 100,
@@ -384,6 +402,9 @@ const styles = StyleSheet.create({
 		borderRadius: "50%",
 	},
 
+	label: {
+		fontStyle: "italic",
+	},
 	textInput: {
 		width: 250,
 		borderWidth: 1,

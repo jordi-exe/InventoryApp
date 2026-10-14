@@ -1,5 +1,12 @@
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import {
+	Pressable,
+	ScrollView,
+	StyleSheet,
+	Text,
+	TextInput,
+	View,
+} from "react-native";
 
 type AutocompleteInputProps = {
 	label: string;
@@ -24,7 +31,11 @@ export const AutoCompleteInput = ({
 
 	return (
 		<View style={styles.autocompleteContainer}>
-			<Text>{label}</Text>
+			<Text
+				style={{ alignSelf: "center", marginBottom: 5, fontStyle: "italic" }}
+			>
+				{label}
+			</Text>
 
 			<TextInput
 				style={styles.textInput}
@@ -41,18 +52,23 @@ export const AutoCompleteInput = ({
 
 			{focused && filteredOptions.length > 0 && (
 				<View style={styles.suggestionsContainer}>
-					{filteredOptions.map((option) => (
-						<Pressable
-							key={option}
-							style={styles.suggestion}
-							onPress={() => {
-								setValue(option);
-								setFocused(false);
-							}}
-						>
-							<Text>{option}</Text>
-						</Pressable>
-					))}
+					<ScrollView
+						keyboardShouldPersistTaps="handled"
+						nestedScrollEnabled={true}
+					>
+						{filteredOptions.map((option) => (
+							<Pressable
+								key={option}
+								style={styles.suggestion}
+								onPress={() => {
+									setValue(option);
+									setFocused(false);
+								}}
+							>
+								<Text>{option}</Text>
+							</Pressable>
+						))}
+					</ScrollView>
 				</View>
 			)}
 		</View>
@@ -70,6 +86,9 @@ const styles = StyleSheet.create({
 		top: "100%",
 		left: 0,
 		right: 0,
+
+		maxHeight: 150,
+		overflow: "hidden",
 
 		backgroundColor: "white",
 		borderWidth: 1,
