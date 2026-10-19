@@ -1,11 +1,13 @@
 import { Feather } from "@react-native-vector-icons/feather";
 import { useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import EditItem from "./editItem";
 
 type InventoryItem = {
 	id: number;
 	title: string;
 	itemCount: number;
+	unit: string;
 	location: string;
 	category: string;
 	expiryDate?: string;
@@ -80,7 +82,7 @@ export default function InventoryItem({ group, items }: InventoryItemProps) {
 								</View>
 
 								<View style={styles.itemButtons}>
-									<Feather name="edit" size={24} color="black" />
+									<EditItem item={item} />
 									<Feather name="trash" size={24} color="black" />
 								</View>
 							</View>

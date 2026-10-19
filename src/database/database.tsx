@@ -74,6 +74,7 @@ export type InventoryItemProps = {
 	id: number;
 	title: string;
 	itemCount: number;
+	unit: string;
 	category: string;
 	location: string;
 };
@@ -84,10 +85,13 @@ export async function loadInventory(db: SQLiteDatabase) {
 			items.id,
 			items.item_name AS title,
 			items.item_quantity AS itemCount,
+			units.name AS unit,
 			items.item_expiry_date AS expiryDate,
 			categories.name AS category,
 			locations.name AS location
 		FROM items
+		JOIN units
+			ON items.unit_id = units.id
 		JOIN categories
 			ON items.category_id = categories.id
 		JOIN locations
