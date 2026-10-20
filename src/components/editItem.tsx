@@ -1,6 +1,6 @@
 import { AutoCompleteInput } from "@/components/autocompleteInput";
 import { DateSelector } from "@/components/dateSelector";
-import { loadOptions } from "@/database/database";
+import { loadOptions, updateItem } from "@/database/database";
 import { Feather } from "@react-native-vector-icons/feather";
 import { useSQLiteContext } from "expo-sqlite";
 import { useEffect, useRef, useState } from "react";
@@ -37,6 +37,7 @@ type InventoryItem = {
 
 type EditItemProps = {
 	item: InventoryItem;
+	onUpdated?: () => void;
 };
 
 const FormatDate = (date?: Date) => {
@@ -49,7 +50,7 @@ const FormatDate = (date?: Date) => {
 	return `${day}-${month}-${year}`;
 };
 
-export default function EditItem({ item }: EditItemProps) {
+export default function EditItem({ item, onUpdated }: EditItemProps) {
 	const db = useSQLiteContext();
 
 	const [visible, setVisible] = useState(false);
@@ -102,6 +103,68 @@ export default function EditItem({ item }: EditItemProps) {
 				? new Date(`${item.expiryDate.slice(0, 10)}T00:00:00`)
 				: undefined,
 		);
+	}
+
+	async function handleUpdateItem() {
+		setErrors({});
+		const newErrors: FormErrorProps = {};
+
+		if (!itemName.trim()) {
+			newErrors.itemName = "Item name is required.";
+		}
+
+		if (
+			!quantity.trim() ||
+			!Number.isFinite(Number(quantity)) ||
+			Number(quantity) < 0
+		) {
+			newErrors.quantity = "Enter a valid quantity.";
+		}
+
+		if (!unit.trim()) {
+			newErrors.unit = "Unit is required.";
+		}
+
+		if (!category.trim()) {
+			newErrors.category = "Category is required.";
+		}
+
+		if (!location.trim()) {
+			newErrors.location = "Location is required.";
+		}
+
+		if (Object.keys(newErrors).length > 0) {
+			setErrors(newErrors);
+			return;
+		}
+
+		try {
+			//Formats the date to YYYY-MM-DD
+			const expiryDate = selected
+				? [
+						selected.getFullYear(),
+						String(selected.getMonth() + 1).padStart(2, "0"),
+						String(selected.getDate()).padStart(2, "0"),
+					].join("-")
+				: null;
+
+			await updateItem(db, item.id, {
+				itemName,
+				quantity: Number(quantity),
+				unit,
+				category,
+				location,
+				expiryDate,
+			});
+
+			setVisible(false);
+			onUpdated?.();
+		} catch (error) {
+			console.error("Failed to update the item:", error);
+			setErrors({
+				itemName: "Failed to update the item. Please try again.",
+			});
+		}
 	}
 
 	return (
@@ -241,7 +304,7 @@ export default function EditItem({ item }: EditItemProps) {
 												justifyContent: "space-between",
 											}}
 										>
-											<Button title="Update" />
+											<Button title="Update" onPress={handleUpdateItem} />
 											<Button
 												title="Cancel"
 												onPress={() => {

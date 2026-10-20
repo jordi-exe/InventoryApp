@@ -61,6 +61,8 @@ export const AutoCompleteInput = ({
 								key={option}
 								style={styles.suggestion}
 								onPress={() => {
+									console.log("Selected suggestion:", option);
+
 									setValue(option);
 									setFocused(false);
 								}}
@@ -95,7 +97,7 @@ const styles = StyleSheet.create({
 		borderColor: "lightgray",
 		borderRadius: 5,
 
-		zIndex: 1000,
+		zIndex: 2000,
 		elevation: 5,
 	},
 

@@ -111,7 +111,12 @@ export default function InventoryScreen() {
 					{Object.entries(groupedItems)
 						.sort(([a], [b]) => a.localeCompare(b))
 						.map(([group, items]) => (
-							<InventoryItem key={group} group={group} items={items} />
+							<InventoryItem
+								key={group}
+								group={group}
+								items={items}
+								onItemUpdated={loadInventoryItems}
+							/>
 						))}
 				</ScrollView>
 			</SafeAreaView>

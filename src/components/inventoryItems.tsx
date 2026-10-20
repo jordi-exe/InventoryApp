@@ -17,6 +17,7 @@ type InventoryItemProps = {
 	group: string;
 
 	items: InventoryItem[];
+	onItemUpdated: () => void;
 };
 
 const FormatDate = (date?: Date) => {
@@ -49,7 +50,11 @@ const GetExpiryStatus = (expiryDate?: string): ExpiryStatus => {
 	}
 };
 
-export default function InventoryItem({ group, items }: InventoryItemProps) {
+export default function InventoryItem({
+	group,
+	items,
+	onItemUpdated,
+}: InventoryItemProps) {
 	const [expanded, setExpanded] = useState(true);
 
 	function toggleItem() {
@@ -82,7 +87,7 @@ export default function InventoryItem({ group, items }: InventoryItemProps) {
 								</View>
 
 								<View style={styles.itemButtons}>
-									<EditItem item={item} />
+									<EditItem item={item} onUpdated={onItemUpdated} />
 									<Feather name="trash" size={24} color="black" />
 								</View>
 							</View>

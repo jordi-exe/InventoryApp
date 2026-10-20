@@ -217,3 +217,96 @@ export async function addItem(db: SQLiteDatabase, item: AddItemProps) {
 		);
 	});
 }
+
+export async function updateItem(
+	db: SQLiteDatabase,
+	id: number,
+	item: AddItemProps,
+) {
+	const trimmedItemName = item.itemName.trim();
+	const trimmedUnit = item.unit.trim();
+	const trimmedCategory = item.category.trim();
+	const trimmedLocation = item.location.trim();
+
+	if (
+		!trimmedItemName ||
+		!trimmedUnit ||
+		!trimmedCategory ||
+		!trimmedLocation
+	) {
+		throw new Error("Missing field.");
+	}
+
+	await db.withTransactionAsync(async () => {
+		//Finds an existing category, otherwise creates a new one
+		const categoryResult = await db.getFirstAsync<{ id: number }>(
+			"SELECT id FROM categories WHERE name = ? COLLATE NOCASE",
+			trimmedCategory,
+		);
+		let categoryId: number;
+		if (categoryResult) {
+			categoryId = categoryResult.id;
+		} else {
+			const result = await db.runAsync(
+				"INSERT INTO categories (name) VALUES (?)",
+				trimmedCategory,
+			);
+			categoryId = result.lastInsertRowId;
+		}
+
+		//Finds an existing unit, otherwise creates a new one
+		const unitResult = await db.getFirstAsync<{ id: number }>(
+			"SELECT id FROM units WHERE name = ? COLLATE NOCASE",
+			trimmedUnit,
+		);
+		let unitId: number;
+		if (unitResult) {
+			unitId = unitResult.id;
+		} else {
+			const result = await db.runAsync(
+				"INSERT INTO units (name) VALUES (?)",
+				trimmedUnit,
+			);
+			unitId = result.lastInsertRowId;
+		}
+
+		//Finds an existing location, otherwise creates a new one
+		const locationResult = await db.getFirstAsync<{ id: number }>(
+			"SELECT id FROM locations WHERE name = ? COLLATE NOCASE",
+			trimmedLocation,
+		);
+		let locationId: number;
+		if (locationResult) {
+			locationId = locationResult.id;
+		} else {
+			const result = await db.runAsync(
+				"INSERT INTO locations (name) VALUES (?)",
+				trimmedLocation,
+			);
+			locationId = result.lastInsertRowId;
+		}
+
+		//Updates the existing item
+		const result = await db.runAsync(
+			`UPDATE items
+			 SET item_name = ?,
+			     item_quantity = ?,
+			     unit_id = ?,
+			     category_id = ?,
+			     location_id = ?,
+			     item_expiry_date = ?
+			 WHERE id = ?`,
+			trimmedItemName,
+			item.quantity,
+			unitId,
+			categoryId,
+			locationId,
+			item.expiryDate,
+			id,
+		);
+
+		if (result.changes === 0) {
+			throw new Error("The item could not be found.");
+		}
+	});
+}
